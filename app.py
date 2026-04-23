@@ -7,16 +7,20 @@ A complete Streamlit application that:
   3. Displays results with actionable recommendations
 """
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-import pickle
 import os
+import pickle
+
+import numpy as np
+import pandas as pd
+import streamlit as st
+
 try:
     import joblib
-except:
-    import sklearn.externals.joblib as joblib
+except ModuleNotFoundError:
+    st.error(
+        "The `joblib` package is not installed. Add `joblib` to `requirements.txt` and redeploy the app."
+    )
+    st.stop()
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="ESG Score & Risk Prediction System",
@@ -78,19 +82,28 @@ st.markdown("""
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 MODEL_DIR = os.path.dirname(__file__)
+REQUIRED_ARTIFACTS = {
+    "score_model": "esg_score_model.pkl",
+    "risk_model": "esg_risk_model_modelC.pkl",
+    "scaler": "scaler__1_.pkl",
+    "score_features": "esg_score_features.pkl",
+    "risk_features": "esg_risk_features_modelC.pkl",
+}
 
 @st.cache_resource(show_spinner="Loading models…")
 def load_artifacts():
     """Load all saved model artifacts. Returns dict or raises on failure."""
-    files = {
-        "score_model":    "esg_score_model.pkl",
-        "risk_model":     "esg_risk_model_modelC.pkl",
-        "scaler":         "scaler__1_.pkl",
-        "score_features": "esg_score_features.pkl",
-        "risk_features":  "esg_risk_features_modelC.pkl",
-    }
+    missing = [
+        fname for fname in REQUIRED_ARTIFACTS.values()
+        if not os.path.exists(os.path.join(MODEL_DIR, fname))
+    ]
+    if missing:
+        raise FileNotFoundError(
+            "Missing model artifact(s): " + ", ".join(missing)
+        )
+
     artifacts = {}
-    for key, fname in files.items():
+    for key, fname in REQUIRED_ARTIFACTS.items():
         path = os.path.join(MODEL_DIR, fname)
         try:
             artifacts[key] = joblib.load(path)
@@ -118,7 +131,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if load_error:
-    st.error(f"⚠️ Could not load model files: {load_error}\n\nMake sure all `.pkl` files are in the same folder as `app.py`.")
+    expected_files = "\n".join(f"- `{fname}`" for fname in REQUIRED_ARTIFACTS.values())
+    st.error(
+        f"⚠️ Could not load model files: {load_error}\n\n"
+        "Make sure all required `.pkl` files are in the same folder as `app.py`:\n"
+        f"{expected_files}"
+    )
     st.stop()
 
 score_features = artifacts["score_features"]   # list of 8 feature names

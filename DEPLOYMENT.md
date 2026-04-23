@@ -34,6 +34,8 @@ Or manually create a repo on github.com and upload the files.
 5. Click **Deploy** — your app will be live in ~60 seconds
 
 > **Important:** `requirements.txt` pins `scikit-learn==1.6.1` to match the version used to train and pickle the models. Do **not** change this version.
+>
+> **Important:** all five `.pkl` files listed above must be committed to the repository. If any are missing, the app will stop at startup and show which artifact is missing.
 
 ---
 
